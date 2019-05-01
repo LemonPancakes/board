@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"os"
 	"strconv"
 
 	"github.com/adamhe17/board/connect6"
@@ -186,7 +187,12 @@ func main() {
 	fmt.Println("Starting application...")
 	go manager.start()
 	http.HandleFunc("/ws", wsPage)
-	http.ListenAndServe(":12345", nil)
+
+	port, ok := os.LookupEnv("port")
+	if !ok {
+		port = "12345"
+	}
+	http.ListenAndServe(":"+port, nil)
 }
 
 func wsPage(res http.ResponseWriter, req *http.Request) {
