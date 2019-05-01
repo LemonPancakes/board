@@ -6,9 +6,8 @@ import (
 	"net/http"
 	"strconv"
 
-	"github.com/adamhe17/connect6"
+	"github.com/adamhe17/board/connect6"
 	"github.com/google/uuid"
-	"github.com/gorilla/sessions"
 	"github.com/gorilla/websocket"
 )
 
@@ -178,9 +177,6 @@ var (
 
 	game    = connect6.Connect6{}
 	players [2]string
-
-	sessionKey   = []byte("lemonpancakes")
-	sessionStore = sessions.NewCookieStore(sessionKey)
 )
 
 func main() {
