@@ -188,7 +188,7 @@ func main() {
 	go manager.start()
 	http.HandleFunc("/ws", wsPage)
 
-	port, ok := os.LookupEnv("port")
+	port, ok := os.LookupEnv("PORT")
 	if !ok {
 		port = "12345"
 	}
