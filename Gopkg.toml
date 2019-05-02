@@ -33,6 +33,9 @@
   name = "github.com/gorilla/websocket"
   version = "1.4.0"
 
+[metadata.heroku]
+  root-package = "github.com/adamhe17/board"
+
 [prune]
   go-tests = true
   unused-packages = true
