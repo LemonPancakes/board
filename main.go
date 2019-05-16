@@ -36,11 +36,7 @@ func (manager *ClientManager) start() {
 				delete(manager.clients, conn)
 			}
 		case message := <-manager.broadcast:
-			for conn := range manager.clients {
-				select {
-				case conn.send <- message:
-				}
-			}
+			manager.sendAll(message)
 		}
 	}
 }
@@ -61,6 +57,15 @@ func (manager *ClientManager) sendToPlayer(message []byte, player int) {
 			conn.send <- message
 		}
 	}
+}
+
+func (manager *ClientManager) addToBroadcast(sender string, mType messageType, message string) {
+	messageJSON, _ := json.Marshal(&Message{
+		Sender:  sender,
+		Type:    mType,
+		Content: message,
+	})
+	manager.broadcast <- messageJSON
 }
 
 func (manager *ClientManager) addPlayer(client *Client) {
@@ -97,39 +102,32 @@ func (c *Client) read() {
 			break
 		}
 
-		moveString := string(message)
-		move := connect6.ParseMove(moveString)
-		player, gameErr := game.MakeMove(move)
-		var messageJSON []byte
-		if gameErr != nil {
-			messageJSON, _ = json.Marshal(&Message{
-				Sender:  c.id,
-				Type:    mtError,
-				Content: gameErr.Error(),
-			})
-		} else {
-			messageJSON, _ = json.Marshal(&Message{
-				Sender:  c.id,
-				Type:    mtMove,
-				Content: moveString + "," + strconv.Itoa(player),
-			})
-			manager.broadcast <- messageJSON
-
-			if game.Finished {
-				messageJSON, _ = json.Marshal(&Message{
-					Sender:  c.id,
-					Type:    mtFinished,
-					Content: strconv.Itoa(game.CurrentPlayer),
-				})
-			} else {
-				messageJSON, _ = json.Marshal(&Message{
-					Sender:  c.id,
-					Type:    mtCurrentPlayer,
-					Content: strconv.Itoa(game.CurrentPlayer),
-				})
-			}
+		messageString := string(message)
+		if messageString == "NewGame" {
+			game.NewGame()
+			manager.addToBroadcast(c.id, mtNewGame, game.GetState())
+			continue
 		}
-		manager.broadcast <- messageJSON
+
+		if messageString == "Resign" {
+			manager.addToBroadcast(c.id, mtResign, strconv.Itoa(c.player))
+			continue
+		}
+
+		move := connect6.ParseMove(messageString)
+		player, gameErr := game.MakeMove(move)
+		if gameErr != nil {
+			manager.addToBroadcast(c.id, mtError, gameErr.Error())
+			continue
+		}
+
+		manager.addToBroadcast(c.id, mtMove, messageString+","+strconv.Itoa(player))
+
+		if game.Finished {
+			manager.addToBroadcast(c.id, mtFinished, strconv.Itoa(game.CurrentPlayer))
+		} else {
+			manager.addToBroadcast(c.id, mtCurrentPlayer, strconv.Itoa(game.CurrentPlayer))
+		}
 	}
 }
 
@@ -166,6 +164,8 @@ const (
 	mtMove          messageType = "Move"
 	mtFinished      messageType = "Finished"
 	mtCurrentPlayer messageType = "CurrentPlayer"
+	mtNewGame       messageType = "NewGame"
+	mtResign        messageType = "Resign"
 )
 
 var (

@@ -114,13 +114,6 @@ func (game *Connect6) GetState() string {
 	} else {
 		gameState += "0"
 	}
-	gameState += ","
-
-	if game.Finished {
-		gameState += "1"
-	} else {
-		gameState += "0"
-	}
 
 	for i := 0; i < 19; i++ {
 		for j := 0; j < 19; j++ {
