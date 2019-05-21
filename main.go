@@ -204,25 +204,7 @@ func main() {
 	fmt.Println("Starting application")
 	go manager.start()
 
-	fmt.Println("Setting up websocket")
-	ws := gin.Default()
-	ws.GET("/ws", wsHandler)
-
-	wsPort, ok := os.LookupEnv("WSPORT")
-	if !ok {
-		wsPort = "8080"
-	}
-
-	go func() {
-		ws.Run(":" + wsPort)
-	}()
-
-	port, ok := os.LookupEnv("PORT")
-	if !ok {
-		port = "8000"
-	}
-
-	fmt.Println("Setting up web client")
+	fmt.Println("Setting up client")
 	r := gin.Default()
 	r.NoRoute(func(c *gin.Context) {
 		dir, file := path.Split(c.Request.RequestURI)
@@ -236,6 +218,13 @@ func main() {
 		}
 	})
 	r.GET("/", clientHandler)
+	r.GET("/ws", wsHandler)
+
+	port, ok := os.LookupEnv("PORT")
+	if !ok {
+		port = "8000"
+	}
+	fmt.Println("client listening on " + port)
 	r.Run(":" + port)
 }
 
