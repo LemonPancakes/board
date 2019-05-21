@@ -208,7 +208,7 @@ func main() {
 	ws := gin.Default()
 	ws.GET("/ws", wsHandler)
 
-	wsPort, ok := os.LookupEnv("PORT")
+	wsPort, ok := os.LookupEnv("WSPORT")
 	if !ok {
 		wsPort = "8080"
 	}
@@ -217,7 +217,7 @@ func main() {
 		ws.Run(":" + wsPort)
 	}()
 
-	port, ok := os.LookupEnv("WSPORT")
+	port, ok := os.LookupEnv("PORT")
 	if !ok {
 		port = "8000"
 	}
