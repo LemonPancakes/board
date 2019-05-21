@@ -1,0 +1,49 @@
+/* You can add global styles to this file, and also import other style files */
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+  font-family: "Roboto";
+}
+.navbar {
+  /* background-color: #3A99A6; */
+  /* color: white; */
+  margin-bottom: 20px;
+}
+.board {
+  width: 600px;
+  height: 600px;
+}
+.board, .board tr, .board td {
+  border-collapse: collapse;
+  border: 1px solid black;
+}
+.piece-container {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+.piece-container:hover {
+  background-color: #CCCCCC;
+  cursor: pointer;
+}
+.piece {
+  width: 85%;
+  height: 85%;
+  border-radius: 50%;
+}
+.piece-primary {
+  background-color: #F3D494
+}
+.piece-secondary {
+  background-color: #BCC982
+}
+.alert-row {
+  height: 50px;
+  margin: 10px;
+}
+.alert-danger:hover {
+  cursor: pointer;
+}
