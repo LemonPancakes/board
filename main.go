@@ -5,11 +5,33 @@ import (
 	"fmt"
 	"net/http"
 	"os"
+	"path"
+	"path/filepath"
 	"strconv"
 
 	"github.com/adamhe17/board/connect6"
+	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
 	"github.com/gorilla/websocket"
+)
+
+type Message struct {
+	Sender    string      `json:"sender,omitempty"`
+	Recipient string      `json:"recipient,omitempty"`
+	Type      messageType `json:"type,omitempty"`
+	Content   string      `json:"content,omitempty"`
+}
+
+type messageType string
+
+const (
+	mtError         messageType = "Error"
+	mtGameState     messageType = "GameState"
+	mtMove          messageType = "Move"
+	mtFinished      messageType = "Finished"
+	mtCurrentPlayer messageType = "CurrentPlayer"
+	mtNewGame       messageType = "NewGame"
+	mtResign        messageType = "Resign"
 )
 
 type ClientManager struct {
@@ -34,6 +56,7 @@ func (manager *ClientManager) start() {
 			if _, ok := manager.clients[conn]; ok {
 				close(conn.send)
 				delete(manager.clients, conn)
+				manager.removePlayer(conn)
 			}
 		case message := <-manager.broadcast:
 			manager.sendAll(message)
@@ -78,6 +101,19 @@ func (manager *ClientManager) addPlayer(client *Client) {
 		client.player = 2
 	} else {
 		client.player = -1
+	}
+}
+
+func (manager *ClientManager) removePlayer(client *Client) {
+	uid := client.id
+	if players[0] == uid {
+		players[0] = ""
+		fmt.Println("Player 1 left")
+	} else if players[1] == uid {
+		players[1] = ""
+		fmt.Println("Player 2 left")
+	} else {
+		fmt.Println("Spectator left")
 	}
 }
 
@@ -149,25 +185,6 @@ func (c *Client) write() {
 	}
 }
 
-type messageType string
-
-type Message struct {
-	Sender    string      `json:"sender,omitempty"`
-	Recipient string      `json:"recipient,omitempty"`
-	Type      messageType `json:"type,omitempty"`
-	Content   string      `json:"content,omitempty"`
-}
-
-const (
-	mtError         messageType = "Error"
-	mtGameState     messageType = "GameState"
-	mtMove          messageType = "Move"
-	mtFinished      messageType = "Finished"
-	mtCurrentPlayer messageType = "CurrentPlayer"
-	mtNewGame       messageType = "NewGame"
-	mtResign        messageType = "Resign"
-)
-
 var (
 	manager = ClientManager{
 		broadcast:  make(chan []byte),
@@ -184,18 +201,52 @@ func main() {
 	fmt.Println("Starting game")
 	game.NewGame()
 
-	fmt.Println("Starting application...")
+	fmt.Println("Starting application")
 	go manager.start()
-	http.HandleFunc("/ws", wsPage)
 
-	port, ok := os.LookupEnv("PORT")
+	fmt.Println("Setting up websocket")
+	ws := gin.Default()
+	ws.GET("/ws", wsHandler)
+
+	wsPort, ok := os.LookupEnv("PORT")
 	if !ok {
-		port = "12345"
+		wsPort = "8080"
 	}
-	http.ListenAndServe(":"+port, nil)
+
+	go func() {
+		ws.Run(":" + wsPort)
+	}()
+
+	port, ok := os.LookupEnv("WSPORT")
+	if !ok {
+		port = "8000"
+	}
+
+	fmt.Println("Setting up web client")
+	r := gin.Default()
+	r.NoRoute(func(c *gin.Context) {
+		dir, file := path.Split(c.Request.RequestURI)
+		ext := filepath.Ext(file)
+		if file == "" || ext == "" {
+			// TODO: make a custom 404 page
+			c.Err()
+		} else {
+			// This will ensure that the angular files are served correctly
+			c.File("./client/dist/client/" + path.Join(dir, file))
+		}
+	})
+	r.GET("/", clientHandler)
+	r.Run(":" + port)
 }
 
-func wsPage(res http.ResponseWriter, req *http.Request) {
+func clientHandler(c *gin.Context) {
+	c.File("./client/dist/client/index.html")
+}
+
+func wsHandler(c *gin.Context) {
+	var res http.ResponseWriter = c.Writer
+	var req *http.Request = c.Request
+
 	conn, error := (&websocket.Upgrader{CheckOrigin: func(r *http.Request) bool { return true }}).Upgrade(res, req, nil)
 	if error != nil {
 		http.NotFound(res, req)
