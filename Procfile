@@ -1,2 +1,2 @@
 web: bin/board
-release: pushd client && ng b --aot --prod && popd
+release: cd client && ng b --aot --prod && cd -
