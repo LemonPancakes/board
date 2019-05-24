@@ -1,0 +1,32 @@
+<div class="container">
+  <div class="row alert-row d-flex justify-content-center">
+    <div *ngIf="error" class="alert alert-danger" (click)="dismissAlert()" role="alert">
+      {{ error }}
+    </div>
+    <div *ngIf="info" class="alert alert-info" (click)="dismissAlert()" role="alert">
+      {{ info }}
+    </div>
+  </div>
+  <div class="row">
+    <div class="col-3 game-info">
+      <h2 class="text-center">Connect 6!</h2>
+      <p>{{ playerStatus() }}</p>
+      <div class="row button-row d-flex justify-content-around">
+        <button type="button" class="btn btn-primary" (click)="newGame()">New Game</button>
+        <button type="button" class="btn btn-danger" (click)="resign()">Resign</button>
+      </div>
+    </div>
+    <div class="col-9 game-board d-flex justify-content-center">
+      <table class="board">
+        <tr *ngFor="let _ of ' '.repeat(19).split(''), let i = index">
+          <td *ngFor="let _ of ' '.repeat(19).split(''), let j = index">
+            <div class="piece-container" (click)="makeMove(i, j)">
+              <div *ngIf="board[i][j] == 1" class="piece piece-primary"></div>
+              <div *ngIf="board[i][j] == 2" class="piece piece-secondary"></div>
+            </div>
+          </td>
+        </tr>
+      </table>
+    </div>
+  </div>
+</div>

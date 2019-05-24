@@ -3,13 +3,16 @@ package main
 import (
 	"encoding/json"
 	"fmt"
+	"math/rand"
 	"net/http"
 	"os"
 	"path"
 	"path/filepath"
 	"strconv"
+	"time"
 
 	"github.com/adamhe17/board/connect6"
+	"github.com/gin-contrib/cors"
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
 	"github.com/gorilla/websocket"
@@ -34,12 +37,19 @@ const (
 	mtResign        messageType = "Resign"
 )
 
+// TODO: add support for other game types
+type GameState struct {
+	players [2]uuid.UUID
+	game    connect6.Connect6
+}
+
 type ClientManager struct {
-	clients    map[*Client]bool
-	broadcast  chan []byte
-	register   chan *Client
-	unregister chan *Client
-	players    [2]string
+	clients     map[*Client]bool
+	broadcast   chan []byte
+	register    chan *Client
+	unregister  chan *Client
+	players     [2]string
+	activeGames map[int]GameState
 }
 
 func (manager *ClientManager) start() {
@@ -187,10 +197,11 @@ func (c *Client) write() {
 
 var (
 	manager = ClientManager{
-		broadcast:  make(chan []byte),
-		register:   make(chan *Client),
-		unregister: make(chan *Client),
-		clients:    make(map[*Client]bool),
+		broadcast:   make(chan []byte),
+		register:    make(chan *Client),
+		unregister:  make(chan *Client),
+		clients:     make(map[*Client]bool),
+		activeGames: make(map[int]GameState),
 	}
 
 	game    = connect6.Connect6{}
@@ -198,9 +209,6 @@ var (
 )
 
 func main() {
-	fmt.Println("Starting game")
-	game.NewGame()
-
 	fmt.Println("Starting application")
 	go manager.start()
 
@@ -211,7 +219,8 @@ func main() {
 		ext := filepath.Ext(file)
 		if file == "" || ext == "" {
 			// TODO: make a custom 404 page
-			c.Err()
+			c.Request.URL.Path = "/"
+			r.HandleContext(c)
 		} else {
 			// This will ensure that the angular files are served correctly
 			c.File("./client/dist/client/" + path.Join(dir, file))
@@ -220,11 +229,15 @@ func main() {
 	r.GET("/", clientHandler)
 	r.GET("/ws", wsHandler)
 
+	// api post routes
+	r.POST("/connect6", newConnect6Handler)
+
 	port, ok := os.LookupEnv("PORT")
 	if !ok {
 		port = "8000"
 	}
 	fmt.Println("client listening on " + port)
+	r.Use(cors.Default())
 	r.Run(":" + port)
 }
 
@@ -242,7 +255,8 @@ func wsHandler(c *gin.Context) {
 		return
 	}
 
-	fmt.Println(req.Body)
+	fmt.Println("----------------INFOOOOooOOooOOO------------")
+	fmt.Println(c.Param("id"))
 
 	uid, _ := uuid.NewRandom()
 	client := &Client{
@@ -256,4 +270,22 @@ func wsHandler(c *gin.Context) {
 
 	go client.read()
 	go client.write()
+}
+
+// Returns unique game ID
+func newConnect6Handler(c *gin.Context) {
+	var gameID int
+
+	rand.Seed(time.Now().UTC().UnixNano())
+	for {
+		gameID = rand.Intn(100000)
+		_, ok := manager.activeGames[gameID]
+		if !ok {
+			manager.activeGames[gameID] = GameState{
+				game: connect6.Connect6{},
+			}
+			break
+		}
+	}
+	c.JSON(http.StatusOK, gameID)
 }

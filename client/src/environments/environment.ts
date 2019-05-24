@@ -4,7 +4,8 @@
 
 export const environment = {
   production: false,
-  BACKEND: "localhost:8000"
+  BACKEND: "http://localhost:8000",
+  SOCKET: "ws://localhost:8000/ws",
 };
 
 /*
