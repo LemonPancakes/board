@@ -8,8 +8,9 @@ import (
 	"path"
 	"path/filepath"
 	"strconv"
+	"time"
 
-	"github.com/adamhe17/board/connect6"
+	"github.com/LemonPancakes/board/connect6"
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
 	"github.com/gorilla/websocket"
@@ -60,6 +61,16 @@ func (manager *ClientManager) start() {
 			}
 		case message := <-manager.broadcast:
 			manager.sendAll(message)
+		}
+	}
+}
+
+func (manager *ClientManager) probe() {
+	for {
+		time.Sleep(60 * 5 * time.Second)
+		fmt.Println("Probe!")
+		for client, _ := range manager.clients {
+			client.socket.WriteMessage(websocket.PingMessage, []byte{})
 		}
 	}
 }
@@ -203,6 +214,9 @@ func main() {
 
 	fmt.Println("Starting application")
 	go manager.start()
+
+	fmt.Println("Starting self-ping thread")
+	go manager.probe()
 
 	fmt.Println("Setting up client")
 	r := gin.Default()
