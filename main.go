@@ -67,7 +67,7 @@ func (manager *ClientManager) start() {
 
 func (manager *ClientManager) probe() {
 	for {
-		time.Sleep(60 * 5 * time.Second)
+		time.Sleep(30 * time.Second)
 		fmt.Println("Probe!")
 		for client, _ := range manager.clients {
 			client.socket.WriteMessage(websocket.PingMessage, []byte{})
